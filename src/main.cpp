@@ -1,9 +1,9 @@
 #include <Arduino.h>
 #include <U8g2lib.h>
+#include <bitset>
 
 //Constants
   const uint32_t interval = 100; //Display update interval
-
 //Pin definitions
   //Row select and enable
   const int RA0_PIN = D3;
@@ -35,6 +35,34 @@
 //Display driver object
 U8G2_SSD1305_128X32_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
+std::bitset<32> readCols(std::bitset<32> in,uint8_t i){
+  std::bitset<32> out = in;
+  out[0+i] = digitalRead(C0_PIN);
+  out[1+i] = digitalRead(C1_PIN);
+  out[2+i] = digitalRead(C2_PIN);
+  out[3+i] = digitalRead(C3_PIN);
+  return out;
+}
+
+void setRow(uint8_t rowIdx){
+  digitalWrite(REN_PIN, LOW);
+  if(rowIdx == 0){
+    digitalWrite(RA0_PIN, HIGH);
+    digitalWrite(RA1_PIN, LOW);
+    digitalWrite(RA2_PIN, LOW);
+  }
+  else if(rowIdx == 1){
+    digitalWrite(RA0_PIN, LOW);
+    digitalWrite(RA1_PIN, HIGH);
+    digitalWrite(RA2_PIN, LOW);
+  }
+  else if(rowIdx == 2){
+    digitalWrite(RA0_PIN, LOW);
+    digitalWrite(RA1_PIN, LOW);
+    digitalWrite(RA2_PIN, HIGH);
+  }
+  digitalWrite(REN_PIN, HIGH);
+}
 //Function to set outputs using key matrix
 void setOutMuxBit(const uint8_t bitIdx, const bool value) {
       digitalWrite(REN_PIN,LOW);
@@ -63,7 +91,7 @@ void setup() {
   pinMode(C0_PIN, INPUT);
   pinMode(C1_PIN, INPUT);
   pinMode(C2_PIN, INPUT);
-  pinMode(C3_PIN, INPUT);
+  // pinMode(C3_PIN, INPUT);
   pinMode(JOYX_PIN, INPUT);
   pinMode(JOYY_PIN, INPUT);
 
@@ -81,6 +109,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  std::bitset<32> inputs;
   static uint32_t next = millis();
   static uint32_t count = 0;
 
@@ -91,11 +120,20 @@ void loop() {
   //Update display
   u8g2.clearBuffer();         // clear the internal memory
   u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
-  u8g2.drawStr(2,10,"Helllo World!");  // write something to the internal memory
-  u8g2.setCursor(2,20);
-  u8g2.print(count++);
-  u8g2.sendBuffer();          // transfer internal memory to the display
+  u8g2.drawStr(2,10,"Hello World!");  // write something to the internal memory
+  //u8g2.setCursor(2,20);
 
+
+  for (int i=0; i<3;i++){
+    setRow(i);
+    delayMicroseconds(3);
+    inputs = readCols(inputs, i);
+  }
+
+  u8g2.setCursor(2,20);
+  u8g2.print(inputs.to_ulong(),HEX);
+  //u8g2.print(count++);
+  u8g2.sendBuffer();          // transfer internal memory to the display
   //Toggle LED
   digitalToggle(LED_BUILTIN);
   
